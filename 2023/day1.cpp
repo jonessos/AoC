@@ -1,5 +1,4 @@
 #include <iostream>
-#include <algorithm>
 #include <fstream>
 #include <vector>
 
@@ -54,15 +53,15 @@ uint solve_2(const std::string &filename)
     std::string     line;
 
     while (std::getline(file, line)) {
-        std::pair<size_t, u8>  first   = {-1, 0};
-        std::pair<size_t, u8>  last    = {-1, 0};
+        std::pair<size_t, u8>  left     = {-1, 0};
+        std::pair<size_t, u8>  right    = {-1, 0};
 
         for (const auto &[num, word]: LUT) {
             size_t found = std::min(line.find(std::to_string(num)), line.find(word));
 
             if (found != std::string::npos)
-                if ((first.first == -1) || (first.first > found))
-                    first = {found, num};
+                if ((left.first == -1) || (left.first > found))
+                    left = {found, num};
         }
 
         for (const auto &[num, word]: LUT) {
@@ -76,11 +75,11 @@ uint solve_2(const std::string &filename)
                 found = std::max(line.rfind(std::to_string(num)), line.rfind(word));
 
             if (found != std::string::npos)
-                if ((last.first == -1) || (last.first < found))
-                    last = {found, num};
+                if ((right.first == -1) || (right.first < found))
+                    right = {found, num};
         }
 
-        result += (first.second * 10) + last.second;
+        result += (left.second * 10) + right.second;
     }
 
     return result;
