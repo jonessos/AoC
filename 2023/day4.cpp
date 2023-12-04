@@ -3,101 +3,61 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <set>
+#include <cmath>
 
-typedef uint8_t         u8;
-typedef unsigned int    uint;
+typedef unsigned int uint;
 
-uint solve_1(const std::string &filename)
+std::pair<uint, uint> solve(const std::string &filename)
 {
-    std::ifstream   file(filename);
-    std::string     line;
-    uint            result = 0;
+    std::ifstream           file(filename);
+    std::string             line;
+    std::pair<uint, uint>   result      = {0, 0};
+    uint                    line_num    = 0;
+    std::vector<uint>       scratchcards;
+
+    scratchcards.resize(
+        std::count(
+            std::istreambuf_iterator<char>(file),
+            std::istreambuf_iterator<char>(), '\n') + 1,
+        1);
+
+    file.seekg(0, std::ios::beg);
 
     while (std::getline(file, line)) {
-        std::istringstream          ss_line(line);
-        std::vector<std::string>    winning_nums;
-        std::vector<std::string>    hand_nums;
-        std::string                 num;
+        std::istringstream  sstr(line);
+        std::set<uint>      win_nums, our_nums, com_nums;
+        uint                num;
 
-        std::getline(ss_line, line, ':');
-        std::getline(ss_line, line, '|');
+        std::getline(sstr, line, ':');
+        std::getline(sstr, line, '|');
 
-        std::istringstream          win(line);
+        std::istringstream  win(line);
 
-        while (win >> num)
-            winning_nums.push_back(num);
+        std::getline(sstr, line, '|');
 
-        std::getline(ss_line, line, '|');
-
-        std::istringstream          hand(line);
-
-        while (hand >> num)
-            hand_nums.push_back(num);
-
-        uint        point = 0;
-        for (const auto &winning_num : winning_nums) {
-            auto it = std::find(hand_nums.begin(), hand_nums.end(), winning_num);
-
-            if (it != hand_nums.end())
-                point = (!point) ? 1 : point * 2;
-        }
-
-        result += point;
-    }
-    return result;
-}
-
-uint solve_2(const std::string &filename)
-{
-    std::ifstream       file(filename);
-    std::string         line;
-    uint                result      = 0;
-    uint                line_count  = 0;
-    std::vector<uint>   scratchcards;
-    const size_t        MAX_CARDS   = 200;  /* >= Number of lines of input */
-
-    scratchcards.resize(MAX_CARDS, 0);
-
-    while (std::getline(file, line)) {
-        std::istringstream          ss_line(line);
-        std::vector<std::string>    winning_nums;
-        std::vector<std::string>    hand_nums;
-        std::string                 num;
-
-        std::getline(ss_line, line, ':');
-        std::getline(ss_line, line, '|');
-
-        std::istringstream          win(line);
+        std::istringstream  our(line);
 
         while (win >> num)
-            winning_nums.push_back(num);
+            win_nums.insert(num);
 
-        std::getline(ss_line, line, '|');
+        while (our >> num)
+            our_nums.insert(num);
 
-        std::istringstream          hand(line);
+        std::set_intersection(
+            win_nums.begin(), win_nums.end(), our_nums.begin(), our_nums.end(),
+            std::inserter(com_nums, com_nums.begin()));
 
-        while (hand >> num)
-            hand_nums.push_back(num);
+        result.first += (uint) std::pow(2, com_nums.size() - 1);
 
-        scratchcards[line_count] += 1;
+        for (uint i = line_num + 1; (i <= line_num + com_nums.size()) && (i < scratchcards.size()); i++)
+            scratchcards[i] += scratchcards[line_num] * 1;
 
-        uint                        matches = 0;
-
-        for (const auto &winning_num : winning_nums) {
-            auto it = std::find(hand_nums.begin(), hand_nums.end(), winning_num);
-
-            if (it != hand_nums.end())
-                matches++;
-        }
-
-        for (uint i = line_count + 1; (i <= line_count + matches) && (i < MAX_CARDS); i++)
-            scratchcards[i] += scratchcards[line_count] * 1;
-
-        line_count++;
+        line_num++;
     }
 
-    for (int i = 0; i < line_count; i++)
-        result += scratchcards[i];
+    for (const auto &count: scratchcards)
+        result.second += count;
 
     return result;
 }
@@ -109,8 +69,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::cout << solve_1(std::string(argv[1])) << std::endl;
-    std::cout << solve_2(std::string(argv[1])) << std::endl;
+    auto result = solve(std::string(argv[1]));
+
+    std::cout << result.first << std::endl << result.second << std::endl;
 
     return 0;
 }
