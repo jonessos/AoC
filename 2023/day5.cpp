@@ -9,6 +9,46 @@ using MapValues_T   = std::tuple<u64, u64, u64>;
 using InputMap_T    = std::vector<MapValues_T>;
 using OutputMap_T   = std::map<u64, u64>;
 
+#if 0
+const std::vector<u64>  SEEDS = {
+    79, 14, 55, 13
+};
+
+const InputMap_T        IMAPS[] = {
+    {
+        {50, 98, 2},
+        {52, 50, 48}
+    },
+    {
+        {0, 15, 37},
+        {37, 52, 2},
+        {39, 0, 15}
+    },
+    {
+        {49, 53, 8},
+        {0, 11, 42},
+        {42, 0, 7},
+        {57, 7, 4}
+    },
+    {
+        {88, 18, 7},
+        {18, 25, 70}
+    },
+    {
+        {45, 77, 23},
+        {81, 45, 19},
+        {68, 64, 13}
+    },
+    {
+        {0, 69, 1},
+        {1, 0, 69}
+    },
+    {
+        {60, 56, 37},
+        {56, 93, 4}
+    }
+};
+#else
 const std::vector<u64>  SEEDS = {
     1778931867, 1436999653, 3684516104, 2759374,
     1192793053, 358764985, 1698790056, 76369598,
@@ -253,7 +293,7 @@ const InputMap_T        IMAPS[] = {
         {3727956151, 3150282471, 536984712}
     }
 };
-
+#endif
 
 std::pair<u64, u64> solve(void)
 {
@@ -276,15 +316,22 @@ std::pair<u64, u64> solve(void)
         return key;
     };
 
-    for (const auto &seed: SEEDS) {
-        u64 value = seed;
-
+    auto update_lowest_loc = [&find_value_of_key](u64 key, u64 &out)
+    {
         for (int i = 0; i < sizeof(IMAPS) / sizeof(IMAPS[0]); i++)
-            value = find_value_of_key(value, IMAPS[i]);
+            key = find_value_of_key(key, IMAPS[i]);
 
-        if ((!result.first) || (result.first > value))
-            result.first = value;
-    }
+        if ((!out) || (out > key))
+            out = key;
+    };
+
+    for (const auto &seed: SEEDS)
+        update_lowest_loc(seed, result.first);
+
+    /* XXX - Brute force, because I can't think of another way */
+    for (u64 i = 0; i < sizeof(SEEDS) / sizeof(SEEDS[0]); i += 2)
+        for (u64 seed = SEEDS[i]; seed < SEEDS[i] + SEEDS[i + 1]; seed++)
+            update_lowest_loc(seed, result.second);
 
     return result;
 }
