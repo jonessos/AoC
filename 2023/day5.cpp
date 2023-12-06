@@ -297,7 +297,9 @@ const InputMap_T        IMAPS[] = {
 
 std::pair<u64, u64> solve(void)
 {
-    std::pair<u64, u64> result = {0, 0};
+    std::pair<u64, u64> result      = {0, 0};
+    u64                 loc_max     = 0;
+    u64                 curr_seed   = 0;
 
     auto find_value_of_key = [](const u64 &key, const InputMap_T &in)
     {
@@ -316,6 +318,23 @@ std::pair<u64, u64> solve(void)
         return key;
     };
 
+    auto find_key_of_value = [](const u64 &value, const InputMap_T &in)
+    {
+        for (const auto &[dst_start, src_start, range]: in)
+            if ((value >= dst_start) && (value <= dst_start + range)) {
+                u64 key = value;
+
+                if (src_start > dst_start)
+                    key += (src_start - dst_start);
+                else
+                    key -= (dst_start - src_start);
+
+                return key;
+            }
+
+        return value;
+    };
+
     auto update_lowest_loc = [&find_value_of_key](u64 key, u64 &out)
     {
         for (int i = 0; i < sizeof(IMAPS) / sizeof(IMAPS[0]); i++)
@@ -325,13 +344,41 @@ std::pair<u64, u64> solve(void)
             out = key;
     };
 
+    auto update_lowest_seed = [&find_key_of_value](u64 value, u64 &out)
+    {
+        for (int i = sizeof(IMAPS) / sizeof(IMAPS[0]) - 1; i >= 0; i--)
+            value = find_key_of_value(value, IMAPS[i]);
+
+        out = value;
+    };
+
+    auto is_seed_in_range = [](const u64 &seed) -> bool
+    {
+        for (int i = 0; i < (sizeof(SEEDS) / sizeof(SEEDS[0])); i += 2)
+            if ((seed >= SEEDS[i]) && (seed <= (SEEDS[i] + SEEDS[i + 1])))
+                return true;
+
+        return false;
+    };
+
     for (const auto &seed: SEEDS)
         update_lowest_loc(seed, result.first);
 
-    /* XXX - Brute force, because I can't think of another way */
-    for (u64 i = 0; i < sizeof(SEEDS) / sizeof(SEEDS[0]); i += 2)
-        for (u64 seed = SEEDS[i]; seed < SEEDS[i] + SEEDS[i + 1]; seed++)
-            update_lowest_loc(seed, result.second);
+    /* Find the maximum location value */
+    for (const auto &[dst_start, src_start, range]: IMAPS[6]) {
+        u64 range_max = dst_start + range;
+
+        loc_max = (loc_max < (range_max)) ? (range_max) : loc_max;
+    }
+
+    for (u64 loc = 0; loc < loc_max; loc++) {
+        update_lowest_seed(loc, curr_seed);
+
+        if (is_seed_in_range(curr_seed)) {
+            result.second = loc;
+            break;
+        }
+    }
 
     return result;
 }
