@@ -15,60 +15,68 @@ enum class CardType
     HIGH_CARD,
     ONE_PAIR,
     TWO_PAIR,
-    THREE_OAK,
+    THREE_OF_A_KIND,
     FULL_HOUSE,
-    FOUR_OAK,
-    FIVE_OAK,
+    FOUR_OF_A_KIND,
+    FIVE_OF_A_KIND,
     DEFAULT
 };
 
-CardType get_card_type(const std::string &hand_str, bool jokers_allowed = false)
+CardType get_card_type(const std::string &hand_str, const bool &jokers_allowed = false)
 {
-    std::set<char> unique_chars(hand_str.begin(), hand_str.end());
+    std::set<char>  unique_chars(hand_str.begin(), hand_str.end());
+
+    auto process_jokers = [&jokers_allowed, &unique_chars](std::string &wildcards,
+        char &first_char, std::unordered_map<char, u8> &char_map)
+    {
+        u8      max_char_count      = 0;
+        char    most_occuring_char  = 0;
+
+        /* store the first character that is not 'J' */
+        if (unique_chars.size() == 2)
+            for (const char &c: wildcards)
+                if (c != 'J') {
+                    first_char = c;
+                    break;
+                }
+
+        /* count occurrences of each character */
+        for (const char &c: wildcards)
+            char_map[c]++;
+
+        /* find the maximum occurrence count */
+        for (const auto &[c, c_count] : char_map)
+            if (c != 'J')
+                max_char_count = std::max(max_char_count, c_count);
+
+        /* find the character with maximum occurrence */
+        for (const auto &[c, c_count] : char_map)
+            if ((c_count == max_char_count) && (c != 'J')) {
+                most_occuring_char = c;
+                break;
+            }
+
+        /* replace jokers for processing */
+        for (auto iter = wildcards.begin(); iter < wildcards.end(); ++iter)
+            if (*iter == 'J')
+                *iter = most_occuring_char;
+    };
 
     if (jokers_allowed)
         unique_chars.erase('J');
 
     switch (unique_chars.size()) {
+        case 0:
         case 1:
-            return CardType::FIVE_OAK;
+            return CardType::FIVE_OF_A_KIND;
         case 2: {
             std::string                     wildcards           = hand_str;
             char                            first_char          = wildcards[0];
-            char                            most_occuring_char  = 0;
             std::pair<u8, u8>               count               = {0, 0};
             std::unordered_map<char, u8>    char_map;
 
-            if (jokers_allowed) {
-                u8 max_char_count = 0;
-
-                /* store the first character that is not 'J' */
-                for (const char &c: wildcards)
-                    if (c != 'J') {
-                        first_char = c;
-                        break;
-                    }
-
-                /* count occurrences of each character */
-                for (const char &c: wildcards)
-                    char_map[c]++;
-
-                /* find the maximum occurrence count */
-                for (const auto &[c, c_count] : char_map)
-                    max_char_count = std::max(max_char_count, c_count);
-
-                /* find the character with maximum occurrence */
-                for (const auto &[c, c_count] : char_map)
-                    if ((c_count == max_char_count) && (c != 'J')) {
-                        most_occuring_char = c;
-                        break;
-                    }
-
-                /* replace jokers for processing */
-                for (auto iter = wildcards.begin(); iter < wildcards.end(); ++iter)
-                    if (*iter == 'J')
-                        *iter = most_occuring_char;
-            }
+            if (jokers_allowed)
+                process_jokers(wildcards, first_char, char_map);
 
             for (u8 i = 0; i < wildcards.size(); ++i)
                 if (wildcards[i] == first_char)
@@ -77,53 +85,26 @@ CardType get_card_type(const std::string &hand_str, bool jokers_allowed = false)
                     ++(count.second);
 
             if ((u8) std::abs(count.first - count.second) == 3)
-                return CardType::FOUR_OAK;
+                return CardType::FOUR_OF_A_KIND;
             else
                 return CardType::FULL_HOUSE;
         }
         case 3: {
-            std::string                     wildcards           = hand_str;
-            char                            most_occuring_char  = 0;
+            std::string                     wildcards   = hand_str;
+            char                            dummy       = 0;
             std::unordered_map<char, u8>    char_map;
-            u8                              num_of_jokers;
 
-            num_of_jokers = jokers_allowed ? std::count(hand_str.begin(), hand_str.end(), 'J') : 0;
+            if (jokers_allowed)
+                process_jokers(wildcards, dummy, char_map);
 
-            if (jokers_allowed) {
-                u8 max_char_count = 0;
-
-                /* count occurrences of each character */
-                for (const char &c: wildcards)
-                    char_map[c]++;
-
-                /* find the maximum occurrence count */
-                for (const auto &[c, c_count] : char_map)
-                    max_char_count = std::max(max_char_count, c_count);
-
-                /* find the character with maximum occurrence */
-                for (const auto &[c, c_count] : char_map)
-                    if ((c_count == max_char_count) && (c != 'J')) {
-                        most_occuring_char = c;
-                        break;
-                    }
-
-                if (num_of_jokers == 2)
-                    most_occuring_char = wildcards[0];   /* corner case (234JJ for example) */
-
-                /* replace jokers for processing */
-                for (auto iter = wildcards.begin(); iter < wildcards.end(); ++iter)
-                    if (*iter == 'J')
-                        *iter = most_occuring_char;
-
-                char_map.clear();
-            }
+            char_map.clear();
 
             for (u8 i = 0; i < wildcards.size(); ++i)
                 char_map[wildcards[i]] += 1;
 
             for (const auto &[key, value]: char_map)
                 if (value == 3)
-                    return CardType::THREE_OAK;
+                    return CardType::THREE_OF_A_KIND;
 
             return CardType::TWO_PAIR;
         }
